@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 
-from typing import Callable, List, Mapping, Optional, TypeVar, overload
+from typing import Callable, Mapping, Optional, TypeVar
 
 import abc
 
@@ -36,7 +36,17 @@ class UpdateableStr:
             self.node.nodeValue = self.f()
 
 
-class HtmlComponent(abc.ABC):
+class Component(abc.ABC):
+
+    def build(self) -> Component | HtmlComponent:
+        raise NotImplementedError()
+    
+    @update
+    def render(self, parent):
+        return self.build().render(parent)
+
+
+class HtmlComponent:
     """
     Represents HTML components such as `div`, `button`, `span`, etc.
     """
@@ -74,7 +84,7 @@ class HtmlComponent(abc.ABC):
                 dom.appendChild(node)
             elif isinstance(child, Callable):
                 UpdateableStr(child).render(dom)
-            elif isinstance(child, HtmlComponent):
+            elif isinstance(child, (HtmlComponent, Component)):
                 child.render(dom)
 
         for key, value in self._attributes.items():
@@ -89,3 +99,5 @@ class HtmlComponent(abc.ABC):
     def set_class(self, value):
         func = value if isinstance(value, Callable) else (lambda: value)
         self._element.setAttribute("class", func())
+
+

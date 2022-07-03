@@ -1,18 +1,30 @@
 from js import document, console
 
-from fluid.components import *
+from fluid.components import HtmlComponent, Component
 from fluid.signal import Signal
 
 
 name = Signal("Vincent")
 color = Signal(100)
+show = Signal(False)
 
 
 def on_click(e):
     name.assign(name() + "!")
     color.assign((color() + 100) % 700 + 100)
-    console.log("Hello!")
-    console.log(len(name._subscribers))
+    show.assign(~show())
+    console.log(show())
+
+
+class MyComponent(Component):
+    def __init__(self, show: Signal[bool]):
+        self.show = show
+    
+    def build(self):
+        if self.show():
+            return HtmlComponent("div", {"class": "text-3xl"}, "Well, hello there!")
+        else:
+            return HtmlComponent("div", {}, '')
 
 
 dom = HtmlComponent(
@@ -28,6 +40,7 @@ dom = HtmlComponent(
         },
         "Generate name"
     ),
+    MyComponent(show)
 )
 
 document.body.appendChild(dom.render());
