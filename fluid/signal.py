@@ -11,6 +11,7 @@ EffectType = Callable[[], None]
 
 context: List[EffectType] = []
 
+
 def update(function: EffectType):
     def wrapped(*args, **kwargs) -> None:
         _function = lambda: function(*args, **kwargs)
@@ -22,18 +23,6 @@ def update(function: EffectType):
             return r
 
     return wrapped
-
-
-def watch(function: EffectType):
-    def wrapped(*args, **kwargs) -> None:
-        _function = lambda: function(*args, **kwargs)
-        context.append(_function)
-        try:
-            _function()
-        finally:
-            context.pop()
-    wrapped()
-
 
 
 class Signal(Generic[T]):
@@ -63,5 +52,3 @@ class Signal(Generic[T]):
         new = Signal(self._value + other._value)
         update(lambda: new.assign(self() + other()))()
         return new
-
-

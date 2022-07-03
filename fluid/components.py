@@ -1,166 +1,91 @@
 from __future__ import annotations
 from dataclasses import dataclass
 
-from typing import Callable, List, Mapping, Optional, overload
+from typing import Callable, List, Mapping, Optional, TypeVar, overload
 
 import abc
-import uuid
 
-from .signal import update, watch
-from .pyscript import Element, console, create
+from .signal import update
 
-
-SAFE_ATTRIBUTES = {
-    "klass": "class",
-    "py_onclick": "pys-onClick"
-}
-"""
-Certain HTML class attributes are no valid python variable names.
-This mapping stores the translation between the valid variable names and the
-HTML attributes.
-
-.. code-block::
-
-    btn = Button(..., py_onclick='func')
-
-The keyword argument `py_onclick` is mapped to `pys-onClick` in the DOM.
-"""
-
-_TEMPLATE_NO_INNER_HTML = """
-<{tag}{space}{attributes}></{tag}>
-"""
-
-_TEMPLATE_INNER_HTML = """
-<{tag}{space}{attributes}>
-{inner_html}
-</{tag}>
-"""
-
-def _create_compoment(tag, inner_html, **kwargs):
-    template = _TEMPLATE_NO_INNER_HTML if inner_html is None else _TEMPLATE_INNER_HTML
-    return template.format(
-        tag=tag,
-        space=' ' if len(kwargs) > 0 else '',
-        attributes=" ".join([f"{SAFE_ATTRIBUTES.get(key, key)}=\"{value}\"" for key, value in kwargs.items() if value is not None]),
-        inner_html=inner_html or ''
-    )
+from js import document, console
 
 
-
+JsElement = TypeVar("JsElement")
 C = Callable[[], str]
+
 """
 Type to represent a function which produces a string.
 Typically, the function will contain `Signal`s.
 """
+
+
+class UpdateableStr:
+
+    def __init__(self, f: C):
+        self.f = f
+        self._rendered = False
+
+    @update
+    def render(self, parent):
+        console.log("re-render updateable str")
+        if not self._rendered:
+            self.node = document.createTextNode(self.f())
+            parent.appendChild(self.node)
+            self._rendered = True
+        else:
+            self.node.nodeValue = self.f()
+
 
 class HtmlComponent(abc.ABC):
     """
     Represents HTML components such as `div`, `button`, `span`, etc.
     """
 
-    def __init__(self, tag: str, child: Optional["HtmlComponent" | List["HtmlComponent"] | C | str] = None, klass: Optional[C | str] = None, **attributes):
+    def __init__(
+        self,
+        tag: str,
+        attributes: Mapping[str, str | C],
+        *children
+    ):
         """
         :param tag: indicates the beginning and end of an HTML element <tag> </tag>
-        :param child: element rendered inside the component
-        :param klass: class attributes of the component
-        :param attributes: other class attributes
+        :param attributes: properties such as 'id', 'class', 'pys-onClick', etc.
+        :param children: element rendered inside the component
         """
         self._tag = tag
-        self._child = child
+        self._children = children
         self._attributes = attributes
-        self._id = "fluid-" + str(uuid.uuid4())
-        self._rendered = False
+        # self._id = attributes.get("id", "fluid-" + str(uuid.uuid4()))
         
-        # make sure klass is a function
-        if isinstance(klass, str):
-            klass = lambda: klass
-        self._klass = klass
+    def render(self, parent: Optional[JsElement] = None) -> JsElement:
+        console.log("re-render htmlcomponent")
+        def _mount(el: JsElement) -> JsElement:
+            return el if parent is None else parent.appendChild(el)
 
-        self._element = create(self._tag, self._id, self._klass())
-        # self._klass_value = self._klass()
-        console.log(self._element._element.classList.value)
+        self._element = document.createElement(self._tag)
+        dom = _mount(self._element)
 
-        @watch
-        def _update_inner_html():
-            self._element.write(self._inner_html())
+        for child in self._children:
+            if isinstance(child, (str, float)):
+                node = document.createTextNode(str(child))
+                dom.appendChild(node)
+            elif isinstance(child, bool):
+                node = document.createTextNode('')
+                dom.appendChild(node)
+            elif isinstance(child, Callable):
+                UpdateableStr(child).render(dom)
+            elif isinstance(child, HtmlComponent):
+                child.render(dom)
+
+        for key, value in self._attributes.items():
+            if key == "class":
+                self.set_class(value)
+            else:
+                self._element.setAttribute(key, value)
         
-        @watch
-        def _update_class():
-            if not self._rendered:
-                self._klass()
-                return
-
-            el = Element(self._id)
-            old = el.element.classList.value
-            el.remove_class(old.split(" "))
-            el.add_class(self._klass().split(" "))
-
-        
-    def _inner_html(self) -> str:
-        if isinstance(self._child, HtmlComponent):
-            return self._child.__html__()
-        if isinstance(self._child, str):
-            return self._child
-        if isinstance(self._child, Callable):
-            return self._child()
-        if self._child is None:
-            return ''
-        if isinstance(self._child, list):
-            return " ".join(map(lambda x: x.__html__(), self._child))
-        raise NotImplementedError()
+        return dom
     
-    def __html__(self):
-        self._rendered = True
-        return _create_compoment(self._tag, self._inner_html(), id=self._id, klass=self._klass(), **self._attributes)
-    
-
-# class List_(HtmlComponent):
-#     def __init__(self, *childeren: "HtmlComponent"):
-#         super().__init__(childeren)
-
-#     def render(self):
-#         rendered_childeren = [
-#            child.render() for child in self._child
-#         ]
-#         return " ".join(rendered_childeren)
-
-
-class Div(HtmlComponent):
-    def __init__(self, child: Optional["HtmlComponent" | List["HtmlComponent"] | C | str] = None, klass: Optional[C | str] = None, **attributes):
-        """
-        :param child: element rendered inside the component
-        :param klass: class attributes of the component
-        :param attributes: other class attributes
-        """
-        super().__init__("div", child, klass, **attributes)
-
-
-class Span(HtmlComponent):
-
-    def __init__(self, child: Optional["HtmlComponent" | List["HtmlComponent"] | C | str] = None, klass: Optional[C | str] = None, **attributes):
-        """
-        :param child: element rendered inside the component
-        :param klass: class attributes of the component
-        :param attributes: other class attributes
-        """
-        super().__init__("span", child, klass, **attributes)
-
-    
-class Button(HtmlComponent):
-
-    def __init__(self, child: Optional["HtmlComponent" | List["HtmlComponent"] | C | str] = None, klass: Optional[C | str] = None, on_click: Optional[str] = None, **attributes):
-        """
-        :param child: (reactive) element(s) rendered inside the component
-        :param klass: (reactive) class attributes of the component
-        :param on_click: name of the callback to execute when button is clicked.
-            The function needs to accepts `*args` and `**kwargs`. For example:
-
-            .. code::
-
-                def handle_on_click(*args, **kwargs):
-                    # increases the count by one.
-                    count.assign(count() + 1)
-
-        :param attributes: other class attributes
-        """
-        super().__init__("button", child, klass, py_onclick=on_click, **attributes)
+    @update
+    def set_class(self, value):
+        func = value if isinstance(value, Callable) else (lambda: value)
+        self._element.setAttribute("class", func())
