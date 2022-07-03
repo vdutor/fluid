@@ -5,21 +5,19 @@ from typing import Callable, Generic, TypeVar, Set, List
 from .pyscript import console
 
 
-
 T = TypeVar("T")
-EffectType = Callable[[], None]
 
-context: List[EffectType] = []
+CONTEXT: List[Callable] = []
 
 
-def update(function: EffectType):
+def update(function: Callable):
     def wrapped(*args, **kwargs) -> None:
         _function = lambda: function(*args, **kwargs)
-        context.append(_function)
+        CONTEXT.append(_function)
         try:
             r = _function()
         finally:
-            context.pop()
+            CONTEXT.pop()
             return r
 
     return wrapped
@@ -28,7 +26,7 @@ def update(function: EffectType):
 class Signal(Generic[T]):
     def __init__(self, value: T | None):
         self._value = value
-        self._subscribers: Set[EffectType] = set()
+        self._subscribers: Set[Callable] = set()
     
     def assign(self, new_value: T):
         console.log("setting new value", new_value)
@@ -38,7 +36,7 @@ class Signal(Generic[T]):
             effect()
     
     def __call__(self) -> T:
-        current_context = context[-1] if context else None
+        current_context = CONTEXT[-1] if CONTEXT else None
         if current_context is not None:
             self._subscribers.add(current_context)
         return self._value
