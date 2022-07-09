@@ -5,7 +5,7 @@ from typing import Callable, Mapping, Optional, TypeVar
 
 import abc
 
-from .signal import update
+from .signal import createEffect
 
 from js import document, console
 
@@ -25,7 +25,7 @@ class UpdateableStr:
         self.f = f
         self._rendered = False
 
-    @update
+    @createEffect
     def render(self, parent):
         console.log("re-render updateable str")
         if not self._rendered:
@@ -41,7 +41,7 @@ class Component(abc.ABC):
     def build(self) -> Component | HtmlComponent:
         raise NotImplementedError()
     
-    @update
+    @createEffect
     def render(self, parent):
         return self.build().render(parent)
 
@@ -95,7 +95,7 @@ class HtmlComponent:
         
         return dom
     
-    @update
+    @createEffect
     def set_class(self, value):
         func = value if isinstance(value, Callable) else (lambda: value)
         self._element.setAttribute("class", func())
