@@ -2,7 +2,6 @@
 # https://github.dev/adamhaile/S/blob/main/src/S.ts
 from __future__ import annotations
 from dataclasses import dataclass, field
-from hashlib import new
 
 from typing import Callable, Generic, Iterator, Sequence, TypeVar, Set, List
 
@@ -49,10 +48,8 @@ class Signal(Generic[T]):
     def assign(self, new_value: T):
         self._value = new_value
 
-        count = 0
         for computation in list(self.subscribed_computations):
             computation.execute()
-            count += 1
     
     def __call__(self) -> T:
         if OWNER is not None:
@@ -87,5 +84,6 @@ def createRoot(function: Callable):
     pass
 
 
-
-
+def cleanUp(function: Callable):
+    # TODO
+    pass
