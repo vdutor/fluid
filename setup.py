@@ -6,6 +6,6 @@ setup(
     name="Fluid",
     version="0.0.1",
     author="Vincent Dutordoir",
-    description="Reactive Python framework for User Interfaces",
+    description="Reactive Python Framework",
     packages=find_namespace_packages(include=["fluid*"]),
 )
