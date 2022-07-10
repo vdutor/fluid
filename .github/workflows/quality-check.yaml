@@ -1,0 +1,27 @@
+name: Tests
+
+on: [push]
+
+jobs:
+  check-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+          python-version: ["3.8", "3.9", "3.10"]
+
+    name: Python-${{ matrix.python-version }}
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - uses: actions/cache@v2
+      with:
+        path: ${{ env.pythonLocation }}
+        key: ${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('dev_requirements.txt') }}
+    - name: Install dependencies
+      run: make install
+    - name: Run checks
+      run: make check
+    - name: Run tests
+      run: make test
