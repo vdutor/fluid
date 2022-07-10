@@ -1,8 +1,7 @@
-from js import document, console
+from js import console, document
 
-from fluid.components import HtmlComponent, Component
+from fluid.components import Component, HtmlComponent
 from fluid.signal import Signal
-
 
 name = Signal("Vincent")
 color = Signal(100)

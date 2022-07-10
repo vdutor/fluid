@@ -1,8 +1,7 @@
 import random
 
-from fluid.signal import Signal
 from fluid.components import *
-
+from fluid.signal import Signal
 
 todos: List[str] = [
     "Finish homework",

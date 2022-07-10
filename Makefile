@@ -1,4 +1,4 @@
-.PHONY: help install format check test
+.PHONY: help install format check test wheel
 
 LIB_NAME = fluid
 TESTS_NAME = tests
@@ -10,7 +10,7 @@ help: ## Shows this help message
 
 install:  ## Install repo for developement
 	@echo "\n=== pip install package with dev requirements =============="
-	pip install -r requirements.txt -r dev_requirements.txt -e .
+	pip install -r dev_requirements.txt -e .
 
 
 format: ## Formats code with `black` and `isort`
@@ -34,3 +34,6 @@ check: ## Runs all static checks such as code formatting checks, linting, mypy
 
 test: ## Run unit and integration tests with pytest
 	pytest -v -x --ff -rN -Wignore -s --tb=short --durations=10 $(TESTS_NAME)
+
+wheel: ## Creates whl
+	python setup.py bdist_wheel sdist

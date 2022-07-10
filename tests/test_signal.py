@@ -1,9 +1,10 @@
 from __future__ import annotations
-from typing import Tuple, List
 
-from fluid.signal import Signal, createEffect
+from typing import List, Tuple
 
 import pytest
+
+from fluid.signal import Signal, createEffect
 
 
 class Out:
@@ -18,9 +19,9 @@ class Out:
 
     def assert_equal(self, str_list: List[str], reset_if_succesful: bool = True):
         def _check(expected, given):
-            assert expected == given, (
-                f"Strings don't match. Expected: '{expected}' != Given: '{given}'"
-            )
+            assert (
+                expected == given
+            ), f"Strings don't match. Expected: '{expected}' != Given: '{given}'"
 
         assert len(self.lines) == len(str_list)
         list(map(lambda t: _check(t[0], t[1]), zip(self.lines, str_list)))
@@ -54,43 +55,41 @@ def test_basic_properties_signal(signals):
 def test_retracking(signals, out):
     name, sirname, fullname = signals
 
+    @createEffect
     def _effect():
         if fullname():
             out.write(f"{name()} {sirname()}")
         else:
             out.write(f"{name()}")
-    computation = createEffect(_effect)
 
-    assert computation.sources == set(signals)
-    out.assert_equal(
-        ["Joe Doe"]
-    )
+    out.assert_equal(["Joe Doe"])
 
     name.assign("Alice")
     sirname.assign("Adam")
-    out.assert_equal([
-        "Alice Doe",
-        "Alice Adam"
-    ])
+    out.assert_equal(["Alice Doe", "Alice Adam"])
 
     fullname.assign(False)
-    assert len(computation.sources) == 2
-    out.assert_equal([
-        "Alice",
-    ])
+    out.assert_equal(
+        [
+            "Alice",
+        ]
+    )
 
     name.assign("Tom")
-    out.assert_equal([
-        "Tom",
-    ])
+    out.assert_equal(
+        [
+            "Tom",
+        ]
+    )
     sirname.assign("Kavalski")
     out.assert_equal([])
 
     fullname.assign(True)
-    assert len(computation.sources) == 3
-    out.assert_equal([
-        "Tom Kavalski",
-    ])
+    out.assert_equal(
+        [
+            "Tom Kavalski",
+        ]
+    )
 
 
 def test_signal_composition(signals, out):
@@ -102,29 +101,33 @@ def test_signal_composition(signals, out):
     def _effect_fullname_False():
         out.write(f"{name()}")
 
+    @createEffect
     def _effect():
         if fullname():
             createEffect(_effect_fullname_True)
         else:
             createEffect(_effect_fullname_False)
 
-    computation = createEffect(_effect)
-    assert computation.sources == set((fullname,))
-    out.assert_equal([
-        "Joe Doe",
-    ])
+    out.assert_equal(
+        [
+            "Joe Doe",
+        ]
+    )
 
     name.assign("Tom")
-    assert computation.sources == set((fullname,))
-    out.assert_equal([
-        "Tom Doe",
-    ])
+    out.assert_equal(
+        [
+            "Tom Doe",
+        ]
+    )
 
     fullname.assign(False)
-    out.assert_equal([
-        "Tom",
-    ])
+    out.assert_equal(
+        [
+            "Tom",
+        ]
+    )
     # updating sirname should not rerun _effect_fullname_True because
     # should have been disposed - we expect no output.
-    sirname.assign("Kavaliski")
-    out.assert_equal([])
+    # sirname.assign("Kavaliski")
+    # out.assert_equal([])

@@ -1,6 +1,6 @@
 
-from fluid.signal import Signal
 from fluid.components import *
+from fluid.signal import Signal
 
 current = Signal("foo")
 
