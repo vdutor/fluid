@@ -6,7 +6,7 @@ import abc
 from dataclasses import dataclass, field
 from typing import Callable, Generic, Iterable, List, Set, TypeVar, cast
 
-# from .pyscript import console
+from .utils import doublewrap
 
 T = TypeVar("T")
 """Generic type of signals"""
@@ -18,7 +18,9 @@ VoidFunc = Callable[[], None]
 
 
 class INode(abc.ABC):
-    """Node in computation graph"""
+    """
+    A node in the computation graph. Can be a Signal (i.e. data), Computation, or memo-Signal.
+    """
 
     @abc.abstractmethod
     def get_parents(self) -> List[INode]:
@@ -45,6 +47,8 @@ class Computation(Generic[R], INode):
     """This computation will be disposed when owner is cleaned up."""
     children: Set[Computation] = field(default_factory=set)
     """List of `Computation`s owned by this computation"""
+    name: str | None = None
+    """Computation's name used for debugging and graphing"""
 
     def reset(self) -> None:
         _execute_functions(list(self.cleanups))
@@ -83,7 +87,7 @@ class Signal(Generic[T], INode):
         if self._readonly:
             raise Exception(
                 "Not allowed to assign new value to readonly Signal."
-                "Did you create this signal using createMemo? That would not be allowed."
+                "Did you create this signal using 'createMemo'? That would not be allowed."
             )
         return self._assign(new_value)
 
@@ -121,11 +125,22 @@ def _execute_functions(functions: Iterable[VoidFunc]) -> None:
     _ = list(map(lambda func: func(), functions))
 
 
-def createEffect(function: Callable[[], R]) -> R | None:
-    return createComputation(function).ret
+@doublewrap
+def createEffect(function: Callable[[], R], name: str | None = None) -> R | None:
+    return _createComputation(function, name=name).ret
 
 
-def createComputation(function: Callable[[], R]) -> Computation[R]:
+@doublewrap
+def createMemo(function: Callable[[], R], name: str | None = None) -> Signal[R]:
+    signal = Signal[R](None, readonly=True)
+    computation = _createComputation(lambda: signal._assign(function()), name=name)
+    computation.is_memo = True
+    # link computation to signal
+    signal.computation = computation
+    return signal
+
+
+def _createComputation(function: Callable[[], R], name: str | None) -> Computation[R]:
     global OWNER
     owner = OWNER
 
@@ -133,19 +148,10 @@ def createComputation(function: Callable[[], R]) -> Computation[R]:
         # TODO: raise warning
         pass
 
-    computation = Computation(function, owner=owner)
+    computation = Computation(function, owner=owner, name=name)
     out = computation.execute()
     computation.ret = out
     return computation
-
-
-def createMemo(function: Callable[[], R]) -> Signal[R]:
-    signal = Signal[R](None, readonly=True)
-    computation = createComputation(lambda: signal._assign(function()))
-    computation.is_memo = True
-    # link computation to signal
-    signal.computation = computation
-    return signal
 
 
 def createRoot(function: Callable[[], R]) -> R:
@@ -159,47 +165,3 @@ def cleanUp(function: Callable) -> None:
 
 def batch(function: Callable) -> None:
     pass
-
-
-import os
-import atexit
-from collections import defaultdict
-
-GRAPH = int(os.getenv("GRAPH", "0"))
-
-
-top_colors = {Signal: '#FFFF80', Computation: "#c0c0c0"}
-# dashed = 
-# dashed = optype == LoadOps and getattr(ret, "_backing", None) is not None
-
-if GRAPH:
-    import networkx as nx  # type: ignore
-    G = nx.DiGraph()
-    def save_graph_exit():
-        print("saving", G)
-        nx.drawing.nx_pydot.write_dot(G, '/tmp/comp.dot')
-        # -Gnslimit=100 can make it finish, but you won't like results
-        os.system('dot -Tsvg /tmp/comp.dot -o /tmp/comp.svg')
-    atexit.register(save_graph_exit)
-
-global_num_max = 0
-def nm(x):
-    global global_num_max
-    if getattr(x, 'global_num', None) is None:
-        setattr(x, 'global_num', global_num_max)
-        global_num_max += 1
-    return f"<<< {x.global_num} >>>"
-
-
-def log(root: INode):
-    G.add_node(nm(root))
-
-    if isinstance(root, Signal):
-        G.nodes[nm(root)]['fillcolor'] = top_colors[Signal]
-    elif isinstance(root, Computation):
-        G.nodes[nm(root)]['fillcolor'] = top_colors[Computation]
-
-    for child in root.get_children():
-        G.add_node(nm(child))
-        G.add_edge(nm(root), nm(child))
-        log(child)
