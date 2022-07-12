@@ -129,5 +129,5 @@ def test_signal_composition(signals, out):
     )
     # updating sirname should not rerun _effect_fullname_True because
     # should have been disposed - we expect no output.
-    # sirname.assign("Kavaliski")
-    # out.assert_equal([])
+    sirname.assign("Kavaliski")
+    out.assert_equal([])

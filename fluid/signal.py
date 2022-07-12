@@ -48,21 +48,43 @@ class Computation(Generic[R], INode):
     name: str | None = None
     """Computation's name used for debugging and graphing"""
 
-    def reset(self) -> None:
-        _execute_functions(list(self.cleanups))
+    def __post_init__(self):
+        # add clean up method to list
+        self.cleanups.add(self._remove_computation_from_signal_subscription_list)
+
+    def _remove_computation_from_signal_subscription_list(self) -> None:
         for signal in self.sources:
             signal.subscribed_computations.remove(self)
         self.sources.clear()
 
+    def cleanup(self) -> None:
+        list(map(lambda func: func(), list(self.cleanups)))
+        list(map(lambda child: child.cleanup(), list(self.children)))
+        self.children.clear()
+
     def execute(self) -> R:
         global OWNER
-        OWNER = self
-        self.reset()
+        global CURRENT_COMPUTATION
+
+        prev_current_computation = CURRENT_COMPUTATION
+        prev_owner = OWNER
+
+        if self.owner is not None:
+            # TODO: remove the None
+            self.owner.children.add(self)
+
+        self.cleanup()
+        OWNER = CURRENT_COMPUTATION = self
+
         try:
             assert self.function is not None
             return self.function()
         finally:
-            OWNER = self.owner
+            OWNER = prev_owner
+            CURRENT_COMPUTATION = prev_current_computation
+        
+    def is_root(self):
+        return self.function is None
 
     def get_parents(self) -> List[INode]:
         return list(self.sources)
@@ -153,6 +175,8 @@ class Signal(Generic[T], INode):
 
 # Globals:
 OWNER: Computation | None = None
+CURRENT_COMPUTATION: Computation | None = None
+ROOT: Computation = Computation(None)
 
 
 def _execute_functions(functions: Iterable[VoidFunc]) -> None:
@@ -180,6 +204,7 @@ def _createComputation(function: Callable[[], R], name: str | None) -> Computati
 
     if OWNER is None:
         # TODO: raise warning
+        # raise Exception("Effects can not be created when owner is None")
         pass
 
     computation = Computation(function, owner=owner, name=name)
@@ -189,9 +214,10 @@ def _createComputation(function: Callable[[], R], name: str | None) -> Computati
 
 
 def createRoot(function: Callable[[], R]) -> R:
-    pass
+    OWNER = ROOT
+    return createEffect(function)
 
 
-def cleanUp(function: Callable) -> None:
-    # TODO
-    pass
+def cleanUp(function: VoidFunc) -> None:
+    if CURRENT_COMPUTATION is None: raise Exception("cleanUp's can only be added to computations")
+    CURRENT_COMPUTATION.cleanups.add(function)
