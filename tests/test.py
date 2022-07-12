@@ -2,7 +2,14 @@ from fluid import Signal, createEffect, createMemo, log
 
 n1 = Signal(10)
 n2 = Signal(5)
-product = createMemo(lambda: n1() * n2())
+
+
+def foo():
+    print("In memo")
+    return n1() * n2()
+
+
+product = createMemo(foo)
 
 
 @createEffect(name="print_product")
@@ -25,14 +32,22 @@ def print_all():
     print(f"{n1()} * {n2()} = {product()}")
 
 
+print("----------")
 
-print(n1)
-print(n2)
-print(product)
+# print(n1)
+# print(n2)
+# print(product)
 
 n1.assign(-1)
 
 log(n1, n2)
+
+print()
+for el in n1.get_topo():
+    if isinstance(el, Signal):
+        print(el)
+    else:
+        print(el.name or "Comp")
 
 # with batch as bt:
 #     n1.assign(3)

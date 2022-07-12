@@ -18,9 +18,7 @@ VoidFunc = Callable[[], None]
 
 
 class INode(abc.ABC):
-    """
-    A node in the computation graph. Can be a Signal (i.e. data), Computation, or memo-Signal.
-    """
+    """A node in the computation directed-graph."""
 
     @abc.abstractmethod
     def get_parents(self) -> List[INode]:
@@ -76,6 +74,24 @@ class Computation(Generic[R], INode):
         return []
 
 
+# from contextlib import ContextDecorator
+
+
+class _Batch:
+    def __init__(self):
+        self.activated: bool = False
+
+    def __enter__(self):
+        self.activated = True
+        return self
+
+    def __exit__(self, *_):
+        self.activated = False
+
+
+batch = _Batch()
+
+
 class Signal(Generic[T], INode):
     def __init__(self, value: T | None, readonly: bool = False):
         self._value = value
@@ -94,10 +110,28 @@ class Signal(Generic[T], INode):
     def _assign(self, new_value: T) -> Signal[T]:
         self._value = new_value
 
-        for computation in list(self.subscribed_computations):
-            computation.execute()
+        # for computation in list(self.subscribed_computations):
+        #     computation.execute()
+        with batch:
+            for el in self.get_topo():
+                if isinstance(el, Computation):
+                    el.execute()
 
         return self
+
+    def get_topo(self) -> List[INode]:
+        visited: Set[INode] = set()  # Set to keep track of visited nodes
+        topo: List[INode] = []
+
+        def build_topo(node: INode):
+            if node not in visited:
+                visited.add(node)
+                for child in node.get_children():
+                    build_topo(child)
+                topo.append(node)
+
+        build_topo(self)
+        return reversed(topo)
 
     def __call__(self) -> T | None:
         if OWNER is not None:
@@ -106,7 +140,7 @@ class Signal(Generic[T], INode):
         return self._value
 
     def __str__(self) -> str:
-        return f"Signal(value={self._value}, readonly={self._readonly}, len_subscribed_computations={len(self.subscribed_computations)})"
+        return f"Signal(value={self._value}, readonly={self._readonly}, len_subscribers={len(self.subscribed_computations)})"
 
     def get_children(self) -> List[INode]:
         return list(self.subscribed_computations)
@@ -160,8 +194,4 @@ def createRoot(function: Callable[[], R]) -> R:
 
 def cleanUp(function: Callable) -> None:
     # TODO
-    pass
-
-
-def batch(function: Callable) -> None:
     pass
