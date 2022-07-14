@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import abc
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Callable, Generic, Iterable, List, Set, TypeVar, cast
 
 from .utils import doublewrap
@@ -82,7 +83,7 @@ class Computation(Generic[R], INode):
         finally:
             OWNER = prev_owner
             CURRENT_COMPUTATION = prev_current_computation
-        
+
     def is_root(self):
         return self.function is None
 
@@ -96,30 +97,48 @@ class Computation(Generic[R], INode):
         return []
 
 
-# from contextlib import ContextDecorator
-
-
 class _Batch:
     def __init__(self):
         self.activated: bool = False
+        self.computations: List[Computation] = []
+        self.signals: List[Signal] = []
 
     def __enter__(self):
         self.activated = True
         return self
 
     def __exit__(self, *_):
+
+        for s in self.signals:
+            s._value = s._pending_value
+            s._pending_value = None
+            s.state = State.CLEAN
+
+        for c in self.computations:
+            c.execute()
+
         self.activated = False
 
 
 batch = _Batch()
 
 
+class State(Enum):
+    CLEAN = "clean"
+    PENDING = "pending"
+
+    def is_pending(self):
+        return self == State.PENDING
+
+
 class Signal(Generic[T], INode):
     def __init__(self, value: T | None, readonly: bool = False):
         self._value = value
+        self._pending_value = None
         self._readonly = readonly
         self.subscribed_computations: Set[Computation] = set()
         self.computation: Computation | None = None
+        self.state: State = State.CLEAN
 
     def assign(self, new_value: T) -> Signal[T]:
         if self._readonly:
@@ -127,14 +146,33 @@ class Signal(Generic[T], INode):
                 "Not allowed to assign new value to readonly Signal."
                 "Did you create this signal using 'createMemo'? That would not be allowed."
             )
+
+        if (
+            batch.activated
+            and self.state.is_pending()
+            and (self._pending_value != new_value)
+        ):
+            raise Exception(
+                "Not allowed to assign another value during batching: "
+                f"{self._pending_value} (PENDING) !=  {new_value}"
+            )
+
         return self._assign(new_value)
 
     def _assign(self, new_value: T) -> Signal[T]:
-        self._value = new_value
 
-        # for computation in list(self.subscribed_computations):
-        #     computation.execute()
-        with batch:
+        if batch.activated:
+            self._pending_value = new_value
+            self.state = State.PENDING
+            batch.signals.append(self)
+
+            for el in self.get_topo():
+                if isinstance(el, Computation):
+                    if el not in batch.computations:
+                        batch.computations.append(el)
+        else:
+            self._value = new_value
+
             for el in self.get_topo():
                 if isinstance(el, Computation):
                     el.execute()
@@ -214,10 +252,10 @@ def _createComputation(function: Callable[[], R], name: str | None) -> Computati
 
 
 def createRoot(function: Callable[[], R]) -> R:
-    OWNER = ROOT
     return createEffect(function)
 
 
 def cleanUp(function: VoidFunc) -> None:
-    if CURRENT_COMPUTATION is None: raise Exception("cleanUp's can only be added to computations")
+    if CURRENT_COMPUTATION is None:
+        raise Exception("cleanUp's can only be added to computations")
     CURRENT_COMPUTATION.cleanups.add(function)
