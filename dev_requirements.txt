@@ -4,3 +4,5 @@ isort
 flake8
 autoflake
 pytest
+networkx
+pydot
