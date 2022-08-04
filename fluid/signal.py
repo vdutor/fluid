@@ -35,9 +35,9 @@ class Computation(Generic[R], INode):
     function: Callable[[], R] | None
     """Function to be recomputed on changing `Signal`s."""
     ret: R | None = None
-    """Return value comutation"""
+    """Return value computation"""
     is_memo: bool = False
-    """Is `true` when computation creates a readonly-Signal"""
+    """Is `true` when computation returns a readonly-Signal"""
     sources: Set[Signal] = field(default_factory=set)
     """Set of `Signal`s the computation depends on."""
     cleanups: Set[Callable[[], None]] = field(default_factory=set)
@@ -59,7 +59,9 @@ class Computation(Generic[R], INode):
         self.sources.clear()
 
     def cleanup(self) -> None:
+        # clean up node: execute all clean up functions
         list(map(lambda func: func(), list(self.cleanups)))
+        # clean up children
         list(map(lambda child: child.cleanup(), list(self.children)))
         self.children.clear()
 
@@ -118,9 +120,8 @@ class _Batch:
             c.execute()
 
         self.activated = False
-
-
-batch = _Batch()
+        self.computations.clear()
+        self.signals.clear()
 
 
 class State(Enum):
@@ -133,11 +134,14 @@ class State(Enum):
 
 class Signal(Generic[T], INode):
     def __init__(self, value: T | None, readonly: bool = False):
-        self._value = value
-        self._pending_value = None
-        self._readonly = readonly
+        self._value: T | None = value
+        self._pending_value: T | None = None
+        self._readonly: bool = readonly
+        """If `True`, trying to assign a new value will raise an Exception."""
         self.subscribed_computations: Set[Computation] = set()
+        """Set of computations that depend on signal. This set will be re-executed on signal changes."""
         self.computation: Computation | None = None
+        """When Signal was created by a memo"""
         self.state: State = State.CLEAN
 
     def assign(self, new_value: T) -> Signal[T]:
@@ -212,6 +216,7 @@ class Signal(Generic[T], INode):
 
 
 # Globals:
+batch = _Batch()
 OWNER: Computation | None = None
 CURRENT_COMPUTATION: Computation | None = None
 ROOT: Computation = Computation(None)
