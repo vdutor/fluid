@@ -62,17 +62,14 @@ def test_batch(signals, out: Out):
     )
 
 
-def test_memo_and_batching(signals: Tuple[Signal, Signal], out: Out):
+def test_batching(signals: Tuple[Signal, Signal], out: Out):
     n1, n2 = signals
 
-    @createEffect(name="print product")
+    @createEffect
     def _foo():
         out.write(f"{n1()} * {n2()} = {n1() * n2()}")
 
     out.clear()  # clear writes from creating the effect
-
-    def _product():
-        return n1() * n2()
 
     n1.assign(-1)
     n2.assign(3)
@@ -93,4 +90,38 @@ def test_memo_and_batching(signals: Tuple[Signal, Signal], out: Out):
         ]
     )
 
-    createMemo(_product)
+
+def test_memo_and_batching(signals: Tuple[Signal, Signal], out: Out):
+    n1, n2 = signals
+    # derived signal
+    prod = createMemo(lambda: n1() * n2())
+
+    @createEffect
+    def _foo():
+        assert n1() * n2() == prod()
+        out.write(f"{n1()} * {n2()} = {prod()}")
+
+    out.assert_equal(
+        [
+            "1 * 2 = 2",
+        ]
+    )
+
+    n1.assign(3)
+    n2.assign(6)
+    out.assert_equal(
+        [
+            "3 * 2 = 6",
+            "3 * 6 = 18",
+        ]
+    )
+
+    with batch:
+        n1.assign(-3)
+        n2.assign(5)
+
+    out.assert_equal(
+        [
+            "-3 * 5 = -15",
+        ]
+    )

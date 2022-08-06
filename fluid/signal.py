@@ -5,7 +5,7 @@ from __future__ import annotations
 import abc
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Generic, Iterable, List, Set, TypeVar, cast
+from typing import Callable, Generic, List, Set, TypeVar, cast
 
 from .utils import doublewrap
 
@@ -99,37 +99,50 @@ class Computation(Generic[R], INode):
         return []
 
 
-class _Batch:
+class Batch:
     def __init__(self):
         self.activated: bool = False
         self.computations: List[Computation] = []
         self.signals: List[Signal] = []
 
     def __enter__(self):
+        self.computations.clear()
+        self.signals.clear()
         self.activated = True
         return self
 
     def __exit__(self, *_):
 
-        for s in self.signals:
-            s._value = s._pending_value
-            s._pending_value = None
-            s.state = State.CLEAN
+        i = 0
+        while len(self.signals) > 0 or len(self.computations) > 0:
+            print("Executing step:", i)
+            for s in self.signals:
+                print("setting", s)
+                s._value = s._pending_value
+                s._pending_value = None
+                s.state = State.CLEAN
 
-        for c in self.computations:
-            c.execute()
+            self.signals.clear()
+
+            computation_snapshot = list(self.computations)
+            self.computations.clear()
+
+            for c in computation_snapshot:
+                c.execute()
+
+            i += 1
+            if i > 1_000_000:
+                print("Assume run-away computation...")
 
         self.activated = False
-        self.computations.clear()
-        self.signals.clear()
 
 
 class State(Enum):
     CLEAN = "clean"
     PENDING = "pending"
-
-    def is_pending(self):
-        return self == State.PENDING
+    """New value has been computed but not set"""
+    STALE = "stale"
+    """Sources have changed but pending value has not been set"""
 
 
 class Signal(Generic[T], INode):
@@ -153,7 +166,7 @@ class Signal(Generic[T], INode):
 
         if (
             batch.activated
-            and self.state.is_pending()
+            and self.state == State.PENDING
             and (self._pending_value != new_value)
         ):
             raise Exception(
@@ -164,22 +177,53 @@ class Signal(Generic[T], INode):
         return self._assign(new_value)
 
     def _assign(self, new_value: T) -> Signal[T]:
+        # *Not* is batch mode. Logic is fairly simple:
+        # (1) Set new value
+        # (2) Run through dependency graph and re-execute all computations
+        # self._value = new_value
+        # for el in self.get_topo():
+        #     if isinstance(el, Computation):
+        #         el.execute()
+        # return self
 
-        if batch.activated:
-            self._pending_value = new_value
-            self.state = State.PENDING
-            batch.signals.append(self)
+        activated_batch = False
+        if not batch.activated:
+            activated_batch = True
+            batch.__enter__()
 
-            for el in self.get_topo():
-                if isinstance(el, Computation):
-                    if el not in batch.computations:
-                        batch.computations.append(el)
-        else:
-            self._value = new_value
+        self._pending_value = new_value
+        self.state = State.PENDING
+        batch.signals.append(self)
 
-            for el in self.get_topo():
-                if isinstance(el, Computation):
-                    el.execute()
+        for el in self.get_topo():
+            if el == self:
+                continue
+
+            if isinstance(el, Signal) and el.is_created_by_memo():
+                # There is a signal in the dependency graph created by a
+                # memo.  The signal's value will only be updated once the
+                # corresponding computation has ran. For now, simply set the
+                # signal's state to `STALE`, so that depending computations
+                # know their sources are outdated (state).
+                el.state = State.STALE
+
+            if isinstance(el, Computation):
+                computation = el
+
+                if computation in batch.computations:
+                    # Computation is already scheduled to be executed. Nothing more to do.
+                    continue
+
+                if any(s.state == State.STALE for s in computation.sources):
+                    # Don't schedule the computation because at least one of
+                    # it sources is stale. The computation will be scheduled
+                    # for execution once the stale signal is updated.
+                    continue
+
+                batch.computations.append(computation)
+
+        if activated_batch:
+            batch.__exit__()
 
         return self
 
@@ -204,7 +248,16 @@ class Signal(Generic[T], INode):
         return self._value
 
     def __str__(self) -> str:
-        return f"Signal(value={self._value}, readonly={self._readonly}, len_subscribers={len(self.subscribed_computations)})"
+        return "Signal(value={}, pending={}, readonly={}, state={}, number_subs={})".format(
+            self._value,
+            self._pending_value,
+            self._readonly,
+            self.state,
+            len(self.subscribed_computations),
+        )
+
+    def is_created_by_memo(self):
+        return self.computation is not None
 
     def get_children(self) -> List[INode]:
         return list(self.subscribed_computations)
@@ -216,14 +269,10 @@ class Signal(Generic[T], INode):
 
 
 # Globals:
-batch = _Batch()
+batch = Batch()
 OWNER: Computation | None = None
 CURRENT_COMPUTATION: Computation | None = None
 ROOT: Computation = Computation(None)
-
-
-def _execute_functions(functions: Iterable[VoidFunc]) -> None:
-    _ = list(map(lambda func: func(), functions))
 
 
 @doublewrap
@@ -234,7 +283,7 @@ def createEffect(function: Callable[[], R], name: str | None = None) -> R | None
 @doublewrap
 def createMemo(function: Callable[[], R], name: str | None = None) -> Signal[R]:
     signal = Signal[R](None, readonly=True)
-    computation = _createComputation(lambda: signal._assign(function()), name=name)
+    computation = _createComputation(lambda: signal._assign(function()), name="memo")
     computation.is_memo = True
     # link computation to signal
     signal.computation = computation
