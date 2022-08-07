@@ -19,7 +19,7 @@ class Element:
         self.node.setAttribute(key, value)
 
     def append_child(self, el: "Element" | TextNode) -> Element:
-        return self.node.appendChild(el.node)
+        return self.node.appendChild(el.node)  # type: ignore
 
 
 class TextNode:

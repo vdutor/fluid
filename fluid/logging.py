@@ -19,7 +19,7 @@ NODE_COLORS = {
 NODE_SHAPE = {Signal: "box", Computation: "ellipse"}
 
 if GRAPH:
-    import networkx as nx  # type: ignore
+    import networkx as nx
 
     G = nx.DiGraph()
 
