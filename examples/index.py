@@ -1,3 +1,6 @@
+# Copyright 2022 (c) Vincent Dutordoir
+# SPDX-License-Identifier: Apache-2.0
+
 from js import console, document
 
 from fluid.components import Component, HtmlComponent
@@ -16,9 +19,10 @@ def on_click(e):
 
 
 class MyComponent(Component):
+
     def __init__(self, show: Signal[bool]):
         self.show = show
-    
+
     def build(self):
         if self.show():
             return HtmlComponent("div", {"class": "text-3xl"}, "Well, hello there!")
@@ -27,19 +31,17 @@ class MyComponent(Component):
 
 
 dom = HtmlComponent(
-    "div",
-    {"class": "text-4xl flex flex-col py-10"},
+    "div", {"class": "text-4xl flex flex-col py-10"},
     HtmlComponent("span", {}, lambda: f"Hello, {name()}"),
     HtmlComponent(
-        "button",
-        {
-            "id": "btn",
-            "class": lambda: f"p-2 my-4 text-white bg-blue-{color()} border border-blue-{color()} rounded",
-            "pys-onClick": "on_click"
-        },
-        "Generate name"
-    ),
-    MyComponent(show)
-)
+        "button", {
+            "id":
+                "btn",
+            "class":
+                lambda:
+                f"p-2 my-4 text-white bg-blue-{color()} border border-blue-{color()} rounded",
+            "pys-onClick":
+                "on_click"
+        }, "Generate name"), MyComponent(show))
 
-document.body.appendChild(dom.render());
+document.body.appendChild(dom.render())

@@ -22,6 +22,8 @@ repos:
         args: [-i, -vv, -p] #inplace
         language: python
         types: [python]
+        additional_dependencies:
+          - "toml"
   - repo: https://github.com/pycqa/isort
     hooks:
       - id: isort

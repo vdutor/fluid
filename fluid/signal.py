@@ -1,3 +1,6 @@
+# Copyright 2022 (c) Vincent Dutordoir
+# SPDX-License-Identifier: Apache-2.0
+
 # https://github.dev/solidjs/solid/blob/main/packages/solid/src/reactive/signal.ts
 # https://github.dev/adamhaile/S/blob/main/src/S.ts
 from __future__ import annotations
@@ -100,6 +103,7 @@ class Computation(Generic[R], INode):
 
 
 class Batch:
+
     def __init__(self):
         self.activated: bool = False
         self.computations: List[Computation] = []
@@ -146,6 +150,7 @@ class State(Enum):
 
 
 class Signal(Generic[T], INode):
+
     def __init__(self, value: T | None, readonly: bool = False):
         self._value: T | None = value
         self._pending_value: T | None = None
@@ -161,18 +166,11 @@ class Signal(Generic[T], INode):
         if self._readonly:
             raise Exception(
                 "Not allowed to assign new value to readonly Signal."
-                "Did you create this signal using 'createMemo'? That would not be allowed."
-            )
+                "Did you create this signal using 'createMemo'? That would not be allowed.")
 
-        if (
-            batch.activated
-            and self.state == State.PENDING
-            and (self._pending_value != new_value)
-        ):
-            raise Exception(
-                "Not allowed to assign another value during batching: "
-                f"{self._pending_value} (PENDING) !=  {new_value}"
-            )
+        if (batch.activated and self.state == State.PENDING and (self._pending_value != new_value)):
+            raise Exception("Not allowed to assign another value during batching: "
+                            f"{self._pending_value} (PENDING) !=  {new_value}")
 
         return self._assign(new_value)
 

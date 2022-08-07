@@ -1,3 +1,6 @@
+# Copyright 2022 (c) Vincent Dutordoir
+# SPDX-License-Identifier: Apache-2.0
+
 from __future__ import annotations
 
 from typing import Tuple
@@ -48,27 +51,21 @@ def test_retracking(signals, out):
     out.assert_equal(["Alice Doe", "Alice Adam"])
 
     fullname.assign(False)
-    out.assert_equal(
-        [
-            "Alice",
-        ]
-    )
+    out.assert_equal([
+        "Alice",
+    ])
 
     name.assign("Tom")
-    out.assert_equal(
-        [
-            "Tom",
-        ]
-    )
+    out.assert_equal([
+        "Tom",
+    ])
     sirname.assign("Kavalski")
     out.assert_equal([])
 
     fullname.assign(True)
-    out.assert_equal(
-        [
-            "Tom Kavalski",
-        ]
-    )
+    out.assert_equal([
+        "Tom Kavalski",
+    ])
 
 
 def test_signal_composition(signals, out):
@@ -87,25 +84,19 @@ def test_signal_composition(signals, out):
         else:
             createEffect(_effect_fullname_False)
 
-    out.assert_equal(
-        [
-            "Joe Doe",
-        ]
-    )
+    out.assert_equal([
+        "Joe Doe",
+    ])
 
     name.assign("Tom")
-    out.assert_equal(
-        [
-            "Tom Doe",
-        ]
-    )
+    out.assert_equal([
+        "Tom Doe",
+    ])
 
     fullname.assign(False)
-    out.assert_equal(
-        [
-            "Tom",
-        ]
-    )
+    out.assert_equal([
+        "Tom",
+    ])
     # updating sirname should not rerun _effect_fullname_True because
     # should have been disposed - we expect no output.
     sirname.assign("Kavaliski")
