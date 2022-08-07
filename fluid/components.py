@@ -6,8 +6,9 @@ from __future__ import annotations
 import abc
 from typing import Any, Callable, Mapping
 
-from .js import Console, Element, TextNode
-from .signal import createEffect  # noqa: ignore
+from fluid.js import Console, Element, TextNode
+
+# from fluid.signal import createEffect  # noqa: ignore
 
 C = Callable[[], str]
 """

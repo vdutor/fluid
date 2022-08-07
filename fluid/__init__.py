@@ -3,5 +3,5 @@
 
 """Reactive Web Framework for Python."""
 
-from .logging import log
-from .signal import Signal, createEffect, createMemo, createRoot
+from fluid.logging import log  # type: ignore
+from fluid.signal import Signal, createEffect, createMemo, createRoot

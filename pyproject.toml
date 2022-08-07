@@ -43,6 +43,7 @@ mdx-include = "^1.4.2"
 
 [tool.isort]
 profile = "black"
+line_length = 100
 
 [tool.mypy]
 # --strict

@@ -1,6 +1,7 @@
 # Copyright 2022 (c) Vincent Dutordoir
 # SPDX-License-Identifier: Apache-2.0
 
+# code based on:
 # https://github.dev/solidjs/solid/blob/main/packages/solid/src/reactive/signal.ts
 # https://github.dev/adamhaile/S/blob/main/src/S.ts
 from __future__ import annotations
@@ -10,7 +11,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Callable, Generic, List, Set, TypeVar, cast
 
-from .utils import doublewrap
+from fluid.utils import doublewrap
 
 T = TypeVar("T")
 """Generic type of signals"""
