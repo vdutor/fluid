@@ -40,7 +40,7 @@ yapf = """
 """
 mypy = """
     echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX mypy XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    mypy fluid --strict
+    mypy fluid
 """
 pylint = """
     echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX pylint XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
