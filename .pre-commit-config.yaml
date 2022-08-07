@@ -12,46 +12,6 @@ default_language_version:
   python: python3
 
 repos:
-  - repo: https://github.com/google/yapf
-    rev: v0.32.0
-    hooks:
-      - id: yapf
-        name: yapf
-        description: "A formatter for Python files."
-        entry: yapf
-        args: [-i, -vv, -p] #inplace
-        language: python
-        types: [python]
-        additional_dependencies:
-          - "toml"
-  - repo: https://github.com/pycqa/isort
-    hooks:
-      - id: isort
-    rev: 5.10.1
-  - repo: https://github.com/pre-commit/mirrors-pylint
-    rev: v3.0.0a3
-    hooks:
-      - id: pylint
-        args: [--disable=all, --enable=unused-import]
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: 'v0.971'  # Use the sha / tag you want to point at
-    hooks:
-      - id: mypy
-        exclude: ^tests/
-        args: [--strict]
-
-
-  # -   repo: https://github.com/PyCQA/pydocstyle
-  #     hooks:
-  #     -   id: pydocstyle
-  #         name: pydocstyle
-  #         entry: pydocstyle
-  #         language: python
-  #         types: [python]
-  #         exclude: '(?:tests|examples)\/.*'
-  #         additional_dependencies:
-  #           - "toml"
-  #     rev: 6.1.1
   - repo: https://github.com/Lucas-C/pre-commit-hooks
     rev: v1.1.13
     hooks:
