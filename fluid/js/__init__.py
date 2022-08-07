@@ -1,6 +1,8 @@
 # Copyright 2022 (c) Vincent Dutordoir
 # SPDX-License-Identifier: Apache-2.0
 
+"""Mocks for DOM handling through Javascript."""
+
 from __future__ import annotations
 
 from js import console, document  # type: ignore
