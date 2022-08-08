@@ -1,33 +1,12 @@
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import Tuple
 
 import pytest
 
 from fluid.signal import Signal, createEffect
 
-
-class Out:
-    def __init__(self):
-        self.lines: List[str] = []
-
-    def write(self, s):
-        self.lines.append(s)
-
-    def reset(self):
-        self.lines.clear()
-
-    def assert_equal(self, str_list: List[str], reset_if_succesful: bool = True):
-        def _check(expected, given):
-            assert (
-                expected == given
-            ), f"Strings don't match. Expected: '{expected}' != Given: '{given}'"
-
-        assert len(self.lines) == len(str_list)
-        list(map(lambda t: _check(t[0], t[1]), zip(self.lines, str_list)))
-
-        if reset_if_succesful:
-            self.reset()
+from .utils import Out
 
 
 @pytest.fixture
@@ -129,5 +108,5 @@ def test_signal_composition(signals, out):
     )
     # updating sirname should not rerun _effect_fullname_True because
     # should have been disposed - we expect no output.
-    # sirname.assign("Kavaliski")
-    # out.assert_equal([])
+    sirname.assign("Kavaliski")
+    out.assert_equal([])
