@@ -1,3 +1,6 @@
+# Copyright 2022 (c) Vincent Dutordoir
+# SPDX-License-Identifier: Apache-2.0
+
 from typing import Tuple
 
 import pytest
@@ -43,23 +46,19 @@ def test_batch(signals, out: Out):
     n2.assign(-1)
 
     # two prints because signals were assigned outside batch mode
-    out.assert_equal(
-        [
-            "5 * 2 = 10",
-            "5 * -1 = -5",
-        ]
-    )
+    out.assert_equal([
+        "5 * 2 = 10",
+        "5 * -1 = -5",
+    ])
 
     with batch:
         n1.assign(3)
         n2.assign(4)
 
     # single print because signals were assigned inside batch
-    out.assert_equal(
-        [
-            "3 * 4 = 12",
-        ]
-    )
+    out.assert_equal([
+        "3 * 4 = 12",
+    ])
 
 
 def test_batching(signals: Tuple[Signal, Signal], out: Out):
@@ -73,22 +72,18 @@ def test_batching(signals: Tuple[Signal, Signal], out: Out):
 
     n1.assign(-1)
     n2.assign(3)
-    out.assert_equal(
-        [
-            "-1 * 2 = -2",
-            "-1 * 3 = -3",
-        ]
-    )
+    out.assert_equal([
+        "-1 * 2 = -2",
+        "-1 * 3 = -3",
+    ])
 
     with batch:
         n1.assign(4)
         n2.assign(5)
 
-    out.assert_equal(
-        [
-            "4 * 5 = 20",
-        ]
-    )
+    out.assert_equal([
+        "4 * 5 = 20",
+    ])
 
 
 def test_memo_and_batching(signals: Tuple[Signal, Signal], out: Out):
@@ -101,27 +96,21 @@ def test_memo_and_batching(signals: Tuple[Signal, Signal], out: Out):
         assert n1() * n2() == prod()
         out.write(f"{n1()} * {n2()} = {prod()}")
 
-    out.assert_equal(
-        [
-            "1 * 2 = 2",
-        ]
-    )
+    out.assert_equal([
+        "1 * 2 = 2",
+    ])
 
     n1.assign(3)
     n2.assign(6)
-    out.assert_equal(
-        [
-            "3 * 2 = 6",
-            "3 * 6 = 18",
-        ]
-    )
+    out.assert_equal([
+        "3 * 2 = 6",
+        "3 * 6 = 18",
+    ])
 
     with batch:
         n1.assign(-3)
         n2.assign(5)
 
-    out.assert_equal(
-        [
-            "-3 * 5 = -15",
-        ]
-    )
+    out.assert_equal([
+        "-3 * 5 = -15",
+    ])

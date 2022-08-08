@@ -1,14 +1,16 @@
+# Copyright 2022 (c) Vincent Dutordoir
+# SPDX-License-Identifier: Apache-2.0
+
 # type: ignore
 import atexit
 import os
 
-from .signal import Computation, INode, Signal
+from fluid.signal import Computation, INode, Signal
 
-__all__ = ["log"]
+# __all__ = ["log"]
 
 GRAPH = int(os.getenv("GRAPH", "0"))
 
-# top_colors = {UnaryOps: "#c0c0c0", ReduceOps: "#8080ff", BinaryOps: "#c0c0c0", MovementOps: "#80ff80", ProcessingOps: "#ff8080"}
 NODE_COLORS = {
     Signal: "#FFFF80",
     Computation: "#C0C0C0",
@@ -16,7 +18,7 @@ NODE_COLORS = {
 NODE_SHAPE = {Signal: "box", Computation: "ellipse"}
 
 if GRAPH:
-    import networkx as nx  # type: ignore
+    import networkx as nx
 
     G = nx.DiGraph()
 

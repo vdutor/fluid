@@ -1,13 +1,16 @@
+# Copyright 2022 (c) Vincent Dutordoir
+# SPDX-License-Identifier: Apache-2.0
+
 from __future__ import annotations
 
 import abc
 from typing import Any, Callable, Mapping
 
-from .js import Console, Element, TextNode
-from .signal import createEffect  # noqa: ignore
+from fluid.js import Console, Element, TextNode
+
+# from fluid.signal import createEffect  # noqa: ignore
 
 C = Callable[[], str]
-
 """
 Type to represent a function which produces a string.
 Typically, the function will contain `Signal`s.
@@ -15,6 +18,7 @@ Typically, the function will contain `Signal`s.
 
 
 class UpdateableStr:
+
     def __init__(self, f: C):
         self.f = f
         self._rendered = False
@@ -31,6 +35,7 @@ class UpdateableStr:
 
 
 class Component(abc.ABC):
+
     def build(self) -> Component | HtmlComponent:
         raise NotImplementedError()
 

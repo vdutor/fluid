@@ -1,10 +1,14 @@
-# type: ignore
+# Copyright 2022 (c) Vincent Dutordoir
+# SPDX-License-Identifier: Apache-2.0
 from functools import wraps
+from typing import Any, Callable, TypeVar, cast
 
 __all__ = ["doublewrap"]
 
+F = TypeVar('F', bound=Callable[..., Any])
 
-def doublewrap(decorator):
+
+def doublewrap(decorator: F) -> F:
     """
     A decorator for a decorator, allowing the decorator to be used as:
     ```
@@ -22,7 +26,7 @@ def doublewrap(decorator):
     """
 
     @wraps(decorator)
-    def new_dec(*args, **kwargs):
+    def new_dec(*args, **kwargs):  # type: ignore
         if len(args) == 1 and len(kwargs) == 0 and callable(args[0]):
             # actual decorated function
             return decorator(args[0])
@@ -30,4 +34,4 @@ def doublewrap(decorator):
             # decorator arguments
             return lambda realf: decorator(realf, *args, **kwargs)
 
-    return new_dec
+    return cast(F, new_dec)
