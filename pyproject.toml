@@ -35,7 +35,7 @@ isort = """
     isort fluid tests
 """
 yapf = """
-    echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX black XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX yapf XXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     yapf --recursive --parallel --in-place fluid tests
 """
 mypy = """
