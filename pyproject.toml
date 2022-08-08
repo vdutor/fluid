@@ -67,6 +67,7 @@ mdx-include = "^1.4.2"
 pylint = "^2.14.5"
 taskipy = "^1.10.2"
 pytest = "^7.1.2"
+mkdocs-include-markdown-plugin = "^3.6.1"
 
 [tool.isort]
 profile = "black"
